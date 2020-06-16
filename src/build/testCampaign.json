@@ -1,12 +1,13 @@
 {
     "campaign_id": "test001",
-    "message": "Testing 123",
+    "message": "Make sure the important people in your life know that you love them. Tell them today.",
     "sort": "influence",
     "filter": {
         "tags": [
-            "InfluencerToolkit"
+            "love"
         ]
     },
-    "count": 10
+    "count": 10,
+    "dryRun":true
 }
 

@@ -19,6 +19,7 @@ export class MessagingCampaign
     {
         tags?:Array<string>
     }
+    dryRun?:boolean
 
     static fromJSON(json:any):MessagingCampaign
     {
@@ -59,6 +60,14 @@ export class MessagingCampaign
         if (campaign.count && typeof(campaign.count)!=='number')
         {
             console.log("MessagingCampaign - Invalid count specified: " + JSON.stringify(campaign.count));
+            return null;
+        }
+
+        //make sure dryRun, if specified, is a boolean
+        campaign.dryRun = json.dryRun;
+        if (campaign.dryRun && typeof(campaign.dryRun)!=='boolean')
+        {
+            console.log("MessagingCampaign - Invalid dryRun specified: " + JSON.stringify(campaign.dryRun));
             return null;
         }
 
@@ -258,18 +267,18 @@ export class MessagingCampaignManager
             }
         }
 
-        //set to false for testing
-        let actuallySendMessage = false;
+        //will actuall send unless dryRun:true is specified in the campaign options
+        let actuallySendMessage = this.campaign.dryRun!==true;
+
+        if (!actuallySendMessage)
+            return;
 
         //loop until we're actually able to send without any response error
         while (1)
         {
             try
             {
-                if (actuallySendMessage)
-                {
-                    let response = await this.twitter.post('direct_messages/events/new', params);
-                }
+                let response = await this.twitter.post('direct_messages/events/new', params);
 
                 //update the entry for this recipient. they received this campaign on 'curDate'
                 recipientMap.set(recipientId, curDate);
@@ -428,10 +437,12 @@ export class MessagingCampaignManager
         this.totalToSend = this.recipients.length;
 
         //if the campaign defines a limit, we stay within that limit
-        if (this.campaign.count)
+        if (this.campaign.count && this.campaign.count<this.totalToSend)
             this.totalToSend = this.campaign.count;
         
         console.log(`Preparing to contact ${this.totalToSend} followers`);
+        if (this.campaign.dryRun===true)
+            console.log("*** Campaign.DryRun===true, progress will be displayed but messages will not actually be sent or logged ***");
 
         this.ProcessMessages();
     }
