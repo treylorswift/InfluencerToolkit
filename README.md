@@ -4,6 +4,8 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 
 ### Features
 
+- Command-line tool runs messaging compaigns defined in simple .json files (see "Command-line Information" further below)
+
 - Sent messages are tracked to ensure each follower is not contacted more than once for any particular messaging campaign.
 
 - Followers are automatically sorted by influence and can be further filtered by tags (ie matching words in their twitter bio).
