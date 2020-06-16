@@ -4,7 +4,7 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 
 ### Features
 
-- Node.js command-line tool runs messaging campaigns defined in simple .json files (see "Create your messaging campaign" further below)
+- Node.js command-line tool runs messaging campaigns defined in simple .json files (see "Command-line information" further below)
 
 - Followers are downloaded and cached on the first run. @balajis your follower download will take around 30-40 minutes. If the follower download is interrupted it will resume where it left off on the next run. Refresh your follower cache at any time by running with the `-rebuildFollowers` command-line option.
 
