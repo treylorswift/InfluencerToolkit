@@ -26,7 +26,10 @@ The test campaign won't actually send messages unless you edit testCampaign.json
 This is to prevent people from unintentionally spamming their followers during testing.
 
 It is configured to send a short message to your 10 most influential followers who have 'love'
-mentioned in their Twitter bio .
+mentioned in their Twitter bio.
+
+The first time you run it will download your follower list, which due to API rate limiting could take quite
+awhile if you have a lot of follwers (roughly 1 hour for 300k followers). 
 
 Example output below:
 
@@ -36,21 +39,23 @@ Messaging campaign JSON parsed from testCampaign.json successfully
 Beginning campaign: test001
 Campaign message: Make sure the important people in your life know that you love them. Tell them today.
 Obtaining followers for treylorswift..
+Retreiving 644 followers for treylorswift..
+Finished retreiving followers for treylorswift, total received: 644 - total expected: 644
 Applying filter, only sending to followers matching the following tags: love
 9 followers contained matching tags
 Sorting followers by influence
-Preparing to contact 10 followers
+Preparing to contact 9 followers
 *** Campaign.DryRun===true, progress will be displayed but messages will not actually be sent or logged ***
-Sending 1 of 10 - harddrop
-Sending 2 of 10 - yoshipro101
-Sending 3 of 10 - bbool_
-Sending 4 of 10 - Mabry00Mr
-Sending 5 of 10 - TheEasyBaker
-Sending 6 of 10 - ROBDAWGG619
-Sending 7 of 10 - wordyBirdyNerdy
-Sending 8 of 10 - ratcool_shooter
-Sending 9 of 10 - JaydenGittel
-MessagingCampaign complete, no more eligible followers to message, sent 9 of 10 messages
+Sending 1 of 9 - harddrop
+Sending 2 of 9 - yoshipro101
+Sending 3 of 9 - bbool_
+Sending 4 of 9 - Mabry00Mr
+Sending 5 of 9 - TheEasyBaker
+Sending 6 of 9 - ROBDAWGG619
+Sending 7 of 9 - wordyBirdyNerdy
+Sending 8 of 9 - ratcool_shooter
+Sending 9 of 9 - JaydenGittel
+MessagingCampaign complete, sent 9 messages
 ```
 ## Credits
 
