@@ -29,7 +29,7 @@ user authorization keys as follows:
 The first time you run itk, it will first retreive all of your followers
 and their follower counts in order to rank them by influence. Api rate
 limits mean this may take awhile if you have many followers (around 300k
-followers per hour due to api rate limits).
+followers per hour).
 
 Your followers are cached and won't be retreived again unless you run with the
 -rebuildFollowers option. If you abort the caching of followers, you can resume
