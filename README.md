@@ -22,7 +22,7 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 1.  `git clone https://github.com/treylorswift/InfluencerToolkit.git`
 2.  navigate to src/
 3.  `npm install`
-4.  Go to <https://apps.twitter.com> and create an app for testing this module. Make sure it has read/write permissions.
+4.  Go to <https://apps.twitter.com> and create an app for testing. Make sure it has read/write permissions.
 5.  Grab the consumer key/secret, and the access token/secret and put them in src/build/app_auth.json and src/build/user_auth.json, respectively.
 6. navigate to src/build
 7. Run the test campaign (described below)
