@@ -19,7 +19,7 @@ export class MessagingCampaign
     {
         tags?:Array<string>
     }
-    dryRun?:boolean
+    dryRun:boolean
 
     static fromJSON(json:any):MessagingCampaign
     {
@@ -64,12 +64,12 @@ export class MessagingCampaign
         }
 
         //make sure dryRun, if specified, is a boolean
-        campaign.dryRun = json.dryRun;
-        if (campaign.dryRun && typeof(campaign.dryRun)!=='boolean')
+        if (json.dryRun && typeof(json.dryRun)!=='boolean')
         {
-            console.log("MessagingCampaign - Invalid dryRun specified: " + JSON.stringify(campaign.dryRun));
+            console.log("MessagingCampaign - Invalid dryRun specified: " + JSON.stringify(json.dryRun));
             return null;
         }
+        campaign.dryRun = (json.dryRun===true);
 
         //make sure sort, if specified, is a string and is either 'influence' or 'recent'
         campaign.sort = json.sort;
@@ -127,82 +127,6 @@ export class MessagingCampaign
     }
 }
 
-function LoadMessageHistory(screen_name:string):MessageHistory
-{
-    try
-    {
-        var json = JSON.parse(fs.readFileSync(`./${screen_name}.messageHistory.json`,'utf-8'));
-
-        var msgHistory = new MessageHistory();
-
-        //extract the message events
-        for (var i=0; i<json.events.length; i++)
-        {
-            let event = json.events[i] as MessageEventJson;
-            msgHistory.events.push({campaign_id:event.campaign_id,recipient:event.recipient, time:new Date(event.time)});
-        }
-
-        //extract the campaign / recipient / date maps
-        var campaignKeys = Object.keys(json.campaigns);
-        for (var i=0; i<campaignKeys.length; i++)
-        {
-            var recipientMap = json.campaigns[campaignKeys[i]];
-            var recipientKeys = Object.keys(recipientMap);
-
-            var newRecipientMap = new Map<string,Date>();
-            for (var j=0; j<recipientKeys.length; j++)
-            {
-                newRecipientMap.set(recipientKeys[j], new Date(recipientMap[recipientKeys[j]]));
-            }
-
-            msgHistory.campaigns.set(campaignKeys[i],newRecipientMap);
-        }
-
-        return msgHistory;
-    }
-    catch (err)
-    {
-        if (err.code!=="ENOENT")
-        {
-            console.log("LoadMessageHistory unexpected error: ");
-            console.error(err);
-            process.exit(-1);
-        }
-    }
-
-    return new MessageHistory();
-}
-
-function SaveMessageHistory(screen_name:string, msgHistory:MessageHistory)
-{
-    //the events array can convert to json without any special handling
-    var json:any = {};
-    json.events = msgHistory.events;
-
-    //the campaign maps are trickier and can't be written directly, must
-    //be converted from Map<>s to basic json maps
-
-    //the campaign map needs to end up looking like this:
-    //"campaign_id":
-    //{
-    //  "recipient_id":<date they were sent this campaign message>
-    //}
-    //must convert the Map of strings to json maps before writing
-    json.campaigns = {};
-
-    msgHistory.campaigns.forEach((value:RecipientMap,campaign_id:string,map:CampaignMap):void =>
-    {
-        json.campaigns[campaign_id] = {};
-
-        msgHistory.campaigns.get(campaign_id).forEach((date:Date,recipient_id:string,map:RecipientMap):void =>
-        {
-            json.campaigns[campaign_id][recipient_id] = date.toISOString();
-        });
-    });
-
-    fs.writeFileSync(`./${screen_name}.messageHistory.json`,JSON.stringify(json,null,2));
-}
-
 export class MessagingCampaignManager
 {
     private user:TwitterUser;
@@ -230,17 +154,122 @@ export class MessagingCampaignManager
         this.totalSent = 0;
         this.totalToSend = 0;
 
-        this.messageHistory = LoadMessageHistory(this.user.GetScreenName());
+        this.LoadMessageHistory();
     }
 
+    //we keep a separate history for dry runs so that they simulate
+    //exactly the same way a live run would..
+    //later when you want to do a live run.. you don't mistakenly
+    //look at the dry run history..
+    private GetMessageHistoryFileName()
+    {
+        let screen_name = this.user.GetScreenName();
 
-    private SendMessage = async (recipientId:string)=>
+        let fileName = `./${screen_name}.messageHistory`;
+        if (this.campaign.dryRun===true)
+            fileName += '.dryRun.json';
+        else
+            fileName += '.json';
+        return fileName;
+    }
+
+    private LoadMessageHistory()
+    {
+        try
+        {
+            var json = JSON.parse(fs.readFileSync(this.GetMessageHistoryFileName(),'utf-8'));
+
+            var msgHistory = new MessageHistory();
+
+            //extract the message events
+            for (var i=0; i<json.events.length; i++)
+            {
+                let event = json.events[i] as MessageEventJson;
+                msgHistory.events.push({campaign_id:event.campaign_id,recipient:event.recipient, time:new Date(event.time)});
+            }
+
+            //extract the campaign / recipient / date maps
+            var campaignKeys = Object.keys(json.campaigns);
+            for (var i=0; i<campaignKeys.length; i++)
+            {
+                var recipientMap = json.campaigns[campaignKeys[i]];
+                var recipientKeys = Object.keys(recipientMap);
+
+                var newRecipientMap = new Map<string,Date>();
+                for (var j=0; j<recipientKeys.length; j++)
+                {
+                    newRecipientMap.set(recipientKeys[j], new Date(recipientMap[recipientKeys[j]]));
+                }
+
+                msgHistory.campaigns.set(campaignKeys[i],newRecipientMap);
+            }
+
+            //load succeeded, store it to this.messageHistory
+            this.messageHistory = msgHistory;
+        }
+        catch (err)
+        {
+            //ENOENT is ok and means we dont have a message history yet. any other error
+            //is critical and we must stop
+            if (err.code!=="ENOENT")
+            {
+                console.log("LoadMessageHistory unexpected error: ");
+                console.error(err);
+                process.exit(-1);
+            }
+
+            //if we get here it just means there was no existing message history. so we need to
+            //create a new empty one
+            this.messageHistory = new MessageHistory();
+        }
+    }
+
+    private SaveMessageHistory()
+    {
+        try
+        {
+            //the events array can convert to json without any special handling
+            var json:any = {};
+            json.events = this.messageHistory.events;
+
+            //the campaign maps are trickier and can't be written directly, must
+            //be converted from Map<>s to basic json maps
+
+            //the campaign map needs to end up looking like this:
+            //"campaign_id":
+            //{
+            //  "recipient_id":<date they were sent this campaign message>
+            //}
+            //must convert the Map of strings to json maps before writing
+            json.campaigns = {};
+
+            this.messageHistory.campaigns.forEach((value:RecipientMap,campaign_id:string,map:CampaignMap):void =>
+            {
+                json.campaigns[campaign_id] = {};
+
+                this.messageHistory.campaigns.get(campaign_id).forEach((date:Date,recipient_id:string,map:RecipientMap):void =>
+                {
+                    json.campaigns[campaign_id][recipient_id] = date.toISOString();
+                });
+            });
+
+            fs.writeFileSync(this.GetMessageHistoryFileName(),JSON.stringify(json,null,2));
+        }
+        catch (err)
+        {
+            console.log("Error writing message history, can't continue:");
+            console.error(err);
+            process.exit(-1);
+        }
+    }
+
+    private SendMessage = async (recipient:TwitterFollower):Promise<boolean>=>
     {
         var curDate = new Date();
 
         //update the message history log with this event
         //the events are used to track how many of our 1000-messages-per-24-hours we've used up
-        this.messageHistory.events.push({campaign_id:this.campaign.campaign_id, recipient:recipientId,time:curDate});
+        this.messageHistory.events.push({campaign_id:this.campaign.campaign_id, recipient:recipient.id_str, time:curDate});
 
         //update the recipient map for this campaign so we remember that this recipient has
         //already received this campaign. we store the current date into the map, which
@@ -261,7 +290,7 @@ export class MessagingCampaignManager
                 type: 'message_create',
                 message_create:
                 {
-                    target: { recipient_id: recipientId },
+                    target: { recipient_id: recipient.id_str },
                     message_data: { text: this.campaign.message }
                 }
             }
@@ -269,31 +298,40 @@ export class MessagingCampaignManager
 
         //will actuall send unless dryRun:true is specified in the campaign options
         let actuallySendMessage = this.campaign.dryRun!==true;
-
-        if (!actuallySendMessage)
-            return;
-
+        
         //loop until we're actually able to send without any response error
         while (1)
         {
             try
             {
-                let response = await this.twitter.post('direct_messages/events/new', params);
+                if (actuallySendMessage)
+                {
+                    let response = await this.twitter.post('direct_messages/events/new', params);
+                }
+
+                //no error means the send succeeded, add to the history and save it
 
                 //update the entry for this recipient. they received this campaign on 'curDate'
-                recipientMap.set(recipientId, curDate);
+                recipientMap.set(recipient.id_str, curDate);
 
                 //save the history back to wherever its being stored    
-                SaveMessageHistory(this.user.GetScreenName(), this.messageHistory);
+                this.SaveMessageHistory();
 
-                break;
+                return true;
             }
             catch (err)
             {
-                //need to handle going over the rate limit..
+                //handle going over the rate limit..
                 if (err && Array.isArray(err.errors) && err.errors[0] && err.errors[0].code===88)
                 {
                     console.log('Unexpectedly hit api rate limit, waiting 1 minute before attempting again');
+                }
+                else
+                //handle rejected sends..
+                if (err && Array.isArray(err.errors) && err.errors[0] && err.errors[0].code===349)
+                {
+                    console.log(`Send to ${recipient.screen_name} was denied, they may have unfollowed or blocked you.`);
+                    return false;
                 }
                 else
                 {
@@ -312,15 +350,6 @@ export class MessagingCampaignManager
         {
             console.log(`MessagingCampaign complete, sent ${this.totalSent} messages`);
             return;
-        }
-
-        //need to figure out who the next recipeint is
-        //1) need to stop if there are no more eligible recipients
-        //2) need to skip recipients who have already been contacted in this campaign
-        while (this.nextRecipientIndex<this.recipients.length &&
-               this.messageHistory.HasRecipientRecievedCampaign(this.recipients[this.nextRecipientIndex].id_str, this.campaign.campaign_id))
-        {
-            this.nextRecipientIndex++;
         }
 
         let recipientIndex = this.nextRecipientIndex;
@@ -343,13 +372,18 @@ export class MessagingCampaignManager
         }
 
 
-        setTimeout(()=>
+        setTimeout(async ()=>
         {
-            console.log(`Sending ${this.totalSent+1} of ${this.totalToSend} - ${this.recipients[recipientIndex].screen_name}`);
-            this.SendMessage(this.recipients[recipientIndex].id_str);
- 
+            var sendOK = await this.SendMessage(this.recipients[recipientIndex]);
+            if (sendOK)
+            {
+                //not every send will succeed, for example if the follower has unfollwed since the last time
+                //we cached followers and can't be DM'd anymore
+                console.log(`Sent ${this.totalSent+1} of ${this.totalToSend} - ${this.recipients[recipientIndex].screen_name}`);
+                this.totalSent++;
+            }
+
             //on to the next recipient, keep on going
-            this.totalSent++;
             this.nextRecipientIndex++;
             setTimeout(this.ProcessMessages, 0);
         }, timeToWait);
@@ -358,16 +392,56 @@ export class MessagingCampaignManager
     async Run()
     {
         console.log("Beginning campaign: " + this.campaign.campaign_id);
+        if (this.campaign.dryRun===true)
+            console.log("*** DryRun===true, progress will be displayed but messages will not actually be sent ***");
         console.log("Campaign message: " + this.campaign.message);
 
-        //get the users followers and sort them into an array that we'll
-        //use for the work we're doing
+        //get the users followers
         console.log(`Obtaining followers for ${this.user.GetScreenName()}..`);
         this.recipients = await this.user.GetFollowers();
+
+        //sanity check..
+        if (this.recipients.length===0)
+        {
+            console.log(`${this.user.GetScreenName()} doesn't have any followers, there are no followers to contact`);
+            return;
+        }
+
+        //remove from this list any recipients who we have already contacted in this campaign
+        //
+        //there is room to optimize here by filtering out these users as they are retreived
+        //from storage but for now this is fine. 
+        let numAlreadyContacted = 0;
+        for (var i=0; i<this.recipients.length; )
+        {
+            if (this.messageHistory.HasRecipientRecievedCampaign(this.recipients[i].id_str, this.campaign.campaign_id))
+            {
+                this.recipients.splice(i,1);
+                numAlreadyContacted++;
+            }
+            else
+            {
+                i++;
+            }
+        }
+
+        //if we already contacted some of the followers, spew a little info about that
+        if (numAlreadyContacted>0)
+        {
+            //have we already contacted *everybody*?
+            if (this.recipients.length===0)
+            {
+                console.log(`Already contacted all ${numAlreadyContacted} followers for this campaign, no one left to contact`);
+                return;
+            }
+
+            console.log(`Already contacted ${numAlreadyContacted} followers for this campaign, limiting campaign to remaining ${this.recipients.length} followers`); 
+        }
 
         //apply any filter tags
         if (this.campaign.filter && this.campaign.filter.tags && this.campaign.filter.tags.length>0)
         {
+            //just build a new array of followers who pass the filter test(s)
             let filteredRecipients = new Array<TwitterFollower>();
 
             let keepTags = this.campaign.filter.tags;
@@ -408,7 +482,13 @@ export class MessagingCampaignManager
 
             //proceed only with the filtered recipients
             this.recipients = filteredRecipients;
-            console.log(`${this.recipients.length} followers contained matching tags`);
+            console.log(`${this.recipients.length} eligible followers contained matching tags`);
+        }
+
+        if (this.recipients.length===0)
+        {
+            console.log("No followers left to contact, try another campaign or filter using different tags");
+            return;
         }
 
         //as cached, the followers are ordered by most recently followed (according to api docs)
@@ -432,7 +512,7 @@ export class MessagingCampaignManager
             console.log('Sorting followers by most-recently-followed');
         }
 
-        //by default we will attempt to send to every follower
+        
         this.totalSent = 0;
         this.totalToSend = this.recipients.length;
 
@@ -441,8 +521,6 @@ export class MessagingCampaignManager
             this.totalToSend = this.campaign.count;
         
         console.log(`Preparing to contact ${this.totalToSend} followers`);
-        if (this.campaign.dryRun===true)
-            console.log("*** Campaign.DryRun===true, progress will be displayed but messages will not actually be sent or logged ***");
 
         this.ProcessMessages();
     }

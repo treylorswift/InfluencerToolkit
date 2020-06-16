@@ -67,6 +67,9 @@ The messaging campaign json is as follows:
     sort:string - "influence" orders recipients by their follower count, "recent"
                   orders them by how recently they followed you. If not specified,
                   default is "influence".
+
+    dryRun:boolean - set to true to prevent messages from being sent or logged, useful
+                     during testing
 }
             
 Examples:
