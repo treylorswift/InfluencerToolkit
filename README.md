@@ -161,9 +161,9 @@ btcCampaign.json:
 
   node itk.js btcCampaign.json
 
-  This sends "Buy Bitcoin!" to the top 10 most influential people following you.
-  Run the same command a second time to send the same message to the next 10 most
-  influential people following you.
+  This sends "Buy Bitcoin!" to the top 10 most influential people following you
+  who mention bitcoin in their Twitter bio. Run the same command a second time
+  to send the same message to the next 10 most influential people following you.
 
 node itk.js -rebuildFollowers
 
