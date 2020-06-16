@@ -4,10 +4,15 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 
 ### Features
 
-- Command-line interface
-- Written in Typescript, uses async/await
-- Rate limiting support
-- Uses https://github.com/draftbit/twitter-lite/ for Twitter API access
+- Sent messages are tracked to ensure each follower is not contacted more than once for any particular messaging campaign.
+
+- Followers are automatically sorted by influence and can be further filtered by tags (ie matching words in their twitter bio).
+
+- Message sending API rate limits are respected by tracking api usage and throttling appropriately. Unexpected server imposed API rate limits are respected as well.
+
+- Your follower list can be refreshed periodically using -rebuildFollowers.
+
+### 
 
 
 ### Usage
@@ -27,8 +32,8 @@ This is to prevent people from unintentionally spamming their followers during t
 It is configured to send a short message to your 10 most influential followers who have 'love'
 mentioned in their Twitter bio.
 
-The first time you run it will download your follower list, which due to API rate limiting could take quite
-awhile if you have a lot of follwers (roughly 1 hour for 300k followers). 
+Your follower list will be downloaded the first time you run. Due to API rate limiting this could
+take quite awhile if you have a lot of follwers (roughly 1 hour for 300k followers). 
 
 Example output below:
 
@@ -64,9 +69,9 @@ work with the .ts files in src/ .
 
 ## Credits
 
-Authors:
+- Written by [@treylorswift](https://twitter.com/treylorswift)
 
-- [@treylorswift](https://twitter.com/treylorswift)
+- Uses https://github.com/draftbit/twitter-lite/ for Twitter API access
 
 
 ## Command-line information
