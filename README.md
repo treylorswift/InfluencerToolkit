@@ -5,21 +5,20 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 ### Features
 
 - Command-line interface
-- Typescript, Async / Await
+- Written in Typescript, uses async/await
 - Rate limiting support
 - Uses https://github.com/draftbit/twitter-lite/ for Twitter API access
 
 
 ### Usage
 
-1.  Fork/clone the repo
+1.  `git clone https://github.com/treylorswifth/InfluencerToolkit.git`
 2.  navigate to src/
 3.  `npm install`
-4.  `tsc`
-3.  Go to <https://apps.twitter.com> and create an app for testing this module. Make sure it has read/write permissions.
-4.  Grab the consumer key/secret, and the access token/secret and put them in src/build/app_auth.json and src/build/user_auth.json, respectively.
-5. navigate to src/build
-6. Run the test campaign (described below)
+4.  Go to <https://apps.twitter.com> and create an app for testing this module. Make sure it has read/write permissions.
+5.  Grab the consumer key/secret, and the access token/secret and put them in src/build/app_auth.json and src/build/user_auth.json, respectively.
+6. navigate to src/build
+7. Run the test campaign (described below)
 
 ```
 The test campaign won't actually send messages unless you edit testCampaign.json and remove "dryRun":true.
@@ -57,6 +56,12 @@ Sending 8 of 9 - ratcool_shooter
 Sending 9 of 9 - JaydenGittel
 MessagingCampaign complete, sent 9 messages
 ```
+## Development
+
+The repo ships with pre-built .js files in src/build so that you can test without
+having to install Typescript. But you will obviously need Typescript if you want to
+work with the .ts files in src/ .
+
 ## Credits
 
 Authors:
