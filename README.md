@@ -4,7 +4,7 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 
 ### Features
 
-- Command-line tool runs messaging compaigns defined in simple .json files (see "Command-line Information" further below)
+- Node.js command-line tool runs messaging compaigns defined in simple .json files (see "Command-line Information" further below)
 
 - Sent messages are tracked to ensure each follower is not contacted more than once for any particular messaging campaign.
 
@@ -65,7 +65,7 @@ MessagingCampaign complete, sent 9 messages
 ```
 ## Development
 
-The repo ships with pre-built .js files in src/build so that you can test without
+The repo ships with pre-built .js files in src/build so that you can run/test without
 having to install Typescript. But you will obviously need Typescript if you want to
 work with the .ts files in src/ .
 
