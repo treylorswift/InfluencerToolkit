@@ -132,8 +132,8 @@ The messaging campaign json is as follows:
 
     filter:
     {
-        tags:Array<string> - only messages followers whose Twitter bio contains words
-                             matching any of the tags specified
+        tags:Array<string> - only contacts followers whose Twitter bio contains words
+                             that match any of the tags specified
     }
 
     sort:string - "influence" orders recipients by their follower count, "recent"
