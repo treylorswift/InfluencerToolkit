@@ -1,0 +1,12 @@
+{
+    "campaign_id": "test001",
+    "message": "Testing 123",
+    "sort": "influence",
+    "filter": {
+        "tags": [
+            "InfluencerToolkit"
+        ]
+    },
+    "count": 10
+}
+
