@@ -1,4 +1,5 @@
 # InfluencerToolkit
+```
 itk ("Influencer Toolkit") automates sending of direct messages to your Twitter followers.
 
 Usage:
@@ -42,7 +43,7 @@ The messaging campaign json is as follows:
 {
     message:string - message content - this is the only required field,
                      all other fields below are optional
-
+                 
     count:number - limits sending to <number> followers. if not specified,
                    will send to all followers who have not already been
                    contacted for this campaign, subject to Twitters 1000 msg
