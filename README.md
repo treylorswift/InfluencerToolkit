@@ -1,5 +1,71 @@
 # InfluencerToolkit
+
+Influencer Toolkit automates sending of direct messages to your Twitter followers.
+
+### Features
+
+- Command-line interface
+- Typescript, Async / Await
+- Rate limiting support
+- Uses https://github.com/draftbit/twitter-lite/ for Twitter API access
+
+
+### Usage
+
+1.  Fork/clone the repo
+2.  navigate to src/
+3.  `npm install`
+4.  `tsc`
+3.  Go to <https://apps.twitter.com> and create an app for testing this module. Make sure it has read/write permissions.
+4.  Grab the consumer key/secret, and the access token/secret and put them in src/build/app_auth.json and src/build/user_auth.json, respectively.
+5. navigate to src/build
+6. Run the test campaign (described below)
+
 ```
+The test campaign won't actually send messages unless you edit testCampaign.json and remove "dryRun":true.
+This is to prevent people from unintentionally spamming their followers during testing.
+
+It is configured to send a short message to your 10 most influential followers who have 'love'
+mentioned in their Twitter bio .
+
+Example output below:
+
+>node itk.js testCampaign.json
+
+Messaging campaign JSON parsed from testCampaign.json successfully
+Beginning campaign: test001
+Campaign message: Make sure the important people in your life know that you love them. Tell them today.
+Obtaining followers for treylorswift..
+Applying filter, only sending to followers matching the following tags: love
+9 followers contained matching tags
+Sorting followers by influence
+Preparing to contact 10 followers
+*** Campaign.DryRun===true, progress will be displayed but messages will not actually be sent or logged ***
+Sending 1 of 10 - harddrop
+Sending 2 of 10 - yoshipro101
+Sending 3 of 10 - bbool_
+Sending 4 of 10 - Mabry00Mr
+Sending 5 of 10 - TheEasyBaker
+Sending 6 of 10 - ROBDAWGG619
+Sending 7 of 10 - wordyBirdyNerdy
+Sending 8 of 10 - ratcool_shooter
+Sending 9 of 10 - JaydenGittel
+MessagingCampaign complete, no more eligible followers to message, sent 9 of 10 messages
+```
+## Credits
+
+Authors:
+
+- [@treylorswift](https://twitter.com/treylorswift)
+
+
+## Command-line information
+
+Run with no command line arguments to get more info on usage:
+
+```
+>node itk.js
+
 itk ("Influencer Toolkit") automates sending of direct messages to your Twitter followers.
 
 Usage:
@@ -68,6 +134,9 @@ The messaging campaign json is as follows:
     sort:string - "influence" orders recipients by their follower count, "recent"
                   orders them by how recently they followed you. If not specified,
                   default is "influence".
+                  
+    dryRun:boolean - set to true to prevent messages from being sent or logged, useful
+                     during testing
 }
             
 Examples:
