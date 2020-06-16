@@ -1,18 +1,25 @@
-# InfluencerToolkit
+# Influencer Toolkit
 
 Influencer Toolkit automates sending of direct messages to your Twitter followers.
 
 ### Features
 
-- Command-line interface
-- Written in Typescript, uses async/await
-- Rate limiting support
-- Uses https://github.com/draftbit/twitter-lite/ for Twitter API access
+- Node.js command-line tool runs messaging compaigns defined in simple .json files (see "Command-line Information" further below)
+
+- Sent messages are tracked to ensure each follower is not contacted more than once for any particular messaging campaign.
+
+- Followers are automatically sorted by influence and can be further filtered by tags (ie matching words in their twitter bio).
+
+- Message sending API rate limits are respected by tracking api usage and throttling appropriately. Unexpected server imposed API rate limits are respected as well.
+
+- Your follower list can be refreshed periodically using -rebuildFollowers.
+
+### 
 
 
 ### Usage
 
-1.  `git clone https://github.com/treylorswifth/InfluencerToolkit.git`
+1.  `git clone https://github.com/treylorswift/InfluencerToolkit.git`
 2.  navigate to src/
 3.  `npm install`
 4.  Go to <https://apps.twitter.com> and create an app for testing this module. Make sure it has read/write permissions.
@@ -27,8 +34,8 @@ This is to prevent people from unintentionally spamming their followers during t
 It is configured to send a short message to your 10 most influential followers who have 'love'
 mentioned in their Twitter bio.
 
-The first time you run it will download your follower list, which due to API rate limiting could take quite
-awhile if you have a lot of follwers (roughly 1 hour for 300k followers). 
+Your follower list will be downloaded the first time you run. Due to API rate limiting this could
+take quite awhile if you have a lot of follwers (roughly 1 hour for 300k followers). 
 
 Example output below:
 
@@ -58,15 +65,15 @@ MessagingCampaign complete, sent 9 messages
 ```
 ## Development
 
-The repo ships with pre-built .js files in src/build so that you can test without
+The repo ships with pre-built .js files in src/build so that you can run/test without
 having to install Typescript. But you will obviously need Typescript if you want to
 work with the .ts files in src/ .
 
 ## Credits
 
-Authors:
+- Written by [@treylorswift](https://twitter.com/treylorswift)
 
-- [@treylorswift](https://twitter.com/treylorswift)
+- Uses https://github.com/draftbit/twitter-lite/ for Twitter API access
 
 
 ## Command-line information
