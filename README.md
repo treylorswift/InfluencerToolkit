@@ -8,7 +8,7 @@ Usage:
 
   node itk.js { messaging campaign json specified directly on command line }
 
-  node itk.js -refreshFollowers <optional username>
+  node itk.js -rebuildFollowers <optional username>
 
 app_auth.json must be present in the working directory and contain Twitter
 app authorization keys as follows:
@@ -32,11 +32,10 @@ limits mean this may take awhile if you have many followers (around 300k
 followers per hour due to api rate limits).
 
 Your followers are cached and won't be retreived again unless you run with the
--refreshFollowers option. For fun, you can also retreive and cache other users followers
-by specifying their username after -refreshFollowers. If you abort the caching
-of followers, you can resume by just re-running itk, but you should do so as quickly
-as possible since the longer you wait the more likely circumstances could arise that make
-resuming not possible (ie, the follower list itself changing substantially).
+-rebuildFollowers option. If you abort the caching of followers, you can resume
+by just re-running itk, but you should do so as quickly as possible since the
+longer you wait the more likely circumstances could arise that make resuming not
+possible (ie, the follower list itself changes substantially).
 
 The messaging campaign json is as follows:
 
@@ -71,23 +70,30 @@ The messaging campaign json is as follows:
                   default is "influence".
 }
             
-examples:
+Examples:
 
-node itk.js {\"message\":\"Please visit http://mywebsite.com\",\"count\":10}
+btcCampaign.json:
+  {
+      "campaign_id": "btc001",
+      "message": "Buy Bitcoin!",
+      "sort": "influence",
+      "filter": {
+          "tags": [
+              "bitcoin"
+          ]
+      },
+      "count": 10
+  }
 
-  This sends "Please visit http://mywebsite.com" to the top 10 most influential
-  people following you. Run the same command a second time to send the same message
-  to the next 10 most influential people following you.
+  node itk.js btcCampaign.json
 
-node itk.js {\"message\":\"Buy Bitcoin!\",\"count\":10,\"filter\":{\"tags\":[\"bitcoin\"]}}
+  This sends "Buy Bitcoin!" to the top 10 most influential people following you.
+  Run the same command a second time to send the same message to the next 10 most
+  influential people following you.
 
-  This sends "Buy Bitcoin!" to the top 10 most influential following you who have
-  "bitcoin" in their Twitter bio.
+node itk.js -rebuildFollowers
 
-note itk.js -refreshFollowers balajis
-
-  This will retreive all of balajis's followers and save them to
-  balajis.followers.json, overwriting any previous cache saved there. If a previous
-  follower cache operation was aborted in progress, it will attempt to resume.
-
-  Using -refreshFollowers without specifying a user will refresh your own followers.
+  This will retreive all of your followers and save them to
+  your_screen_name.followers.json, overwriting any previous cache saved there.
+  If a previous follower cache operation was aborted in progress, it will attempt to
+  resume.
