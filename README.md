@@ -132,8 +132,8 @@ The messaging campaign json is as follows:
 
     filter:
     {
-        tags:Array<string> - only messages followers whose Twitter bio contains words
-                             matching any of the tags specified
+        tags:Array<string> - only contacts followers whose Twitter bio contains words
+                             that match any of the tags specified
     }
 
     sort:string - "influence" orders recipients by their follower count, "recent"
@@ -161,9 +161,9 @@ btcCampaign.json:
 
   node itk.js btcCampaign.json
 
-  This sends "Buy Bitcoin!" to the top 10 most influential people following you.
-  Run the same command a second time to send the same message to the next 10 most
-  influential people following you.
+  This sends "Buy Bitcoin!" to the top 10 most influential people following you
+  who mention bitcoin in their Twitter bio. Run the same command a second time
+  to send the same message to the next 10 most influential people following you.
 
 node itk.js -rebuildFollowers
 
