@@ -265,38 +265,7 @@ export class MessagingCampaignManager
 
     private SendMessage = async (recipient:TwitterFollower):Promise<boolean>=>
     {
-        var curDate = new Date();
-
-        //update the message history log with this event
-        //the events are used to track how many of our 1000-messages-per-24-hours we've used up
-        this.messageHistory.events.push({campaign_id:this.campaign.campaign_id, recipient:recipient.id_str, time:curDate});
-
-        //update the recipient map for this campaign so we remember that this recipient has
-        //already received this campaign. we store the current date into the map, which
-        //implicitly means that the follower was sent this campaign at that date/time
-
-        //create the recipient map for this campaign if it doesnt exist yet
-        var recipientMap = this.messageHistory.campaigns.get(this.campaign.campaign_id);
-        if (!recipientMap)
-        {
-            recipientMap = new Map<string,Date>();
-            this.messageHistory.campaigns.set(this.campaign.campaign_id, recipientMap);
-        }
-
-        let params = 
-        {
-            event:
-            {
-                type: 'message_create',
-                message_create:
-                {
-                    target: { recipient_id: recipient.id_str },
-                    message_data: { text: this.campaign.message }
-                }
-            }
-        }
-
-        //will actuall send unless dryRun:true is specified in the campaign options
+        //respect the campaign's dryRun setting
         let actuallySendMessage = this.campaign.dryRun!==true;
         
         //loop until we're actually able to send without any response error
@@ -306,10 +275,40 @@ export class MessagingCampaignManager
             {
                 if (actuallySendMessage)
                 {
+                    let params = 
+                    {
+                        event:
+                        {
+                            type: 'message_create',
+                            message_create:
+                            {
+                                target: { recipient_id: recipient.id_str },
+                                message_data: { text: this.campaign.message }
+                            }
+                        }
+                    }
+
                     let response = await this.twitter.post('direct_messages/events/new', params);
                 }
 
-                //no error means the send succeeded, add to the history and save it
+                //no response error means the send succeeded, add to the history and save it
+                var curDate = new Date();
+
+                //update the message history log with this event
+                //the events are used to track how many of our 1000-messages-per-24-hours we've used up
+                this.messageHistory.events.push({campaign_id:this.campaign.campaign_id, recipient:recipient.id_str, time:curDate});
+
+                //update the recipient map for this campaign so we remember that this recipient has
+                //already received this campaign. we store the current date into the map, which
+                //implicitly means that the follower was sent this campaign at that date/time
+
+                //create the recipient map for this campaign if it doesnt exist yet
+                var recipientMap = this.messageHistory.campaigns.get(this.campaign.campaign_id);
+                if (!recipientMap)
+                {
+                    recipientMap = new Map<string,Date>();
+                    this.messageHistory.campaigns.set(this.campaign.campaign_id, recipientMap);
+                }
 
                 //update the entry for this recipient. they received this campaign on 'curDate'
                 recipientMap.set(recipient.id_str, curDate);

@@ -86,37 +86,37 @@ class MessagingCampaignManager {
     //@ts-ignore
     constructor(user, campaign) {
         this.SendMessage = async (recipient) => {
-            var curDate = new Date();
-            //update the message history log with this event
-            //the events are used to track how many of our 1000-messages-per-24-hours we've used up
-            this.messageHistory.events.push({ campaign_id: this.campaign.campaign_id, recipient: recipient.id_str, time: curDate });
-            //update the recipient map for this campaign so we remember that this recipient has
-            //already received this campaign. we store the current date into the map, which
-            //implicitly means that the follower was sent this campaign at that date/time
-            //create the recipient map for this campaign if it doesnt exist yet
-            var recipientMap = this.messageHistory.campaigns.get(this.campaign.campaign_id);
-            if (!recipientMap) {
-                recipientMap = new Map();
-                this.messageHistory.campaigns.set(this.campaign.campaign_id, recipientMap);
-            }
-            let params = {
-                event: {
-                    type: 'message_create',
-                    message_create: {
-                        target: { recipient_id: recipient.id_str },
-                        message_data: { text: this.campaign.message }
-                    }
-                }
-            };
-            //will actuall send unless dryRun:true is specified in the campaign options
+            //respect the campaign's dryRun setting
             let actuallySendMessage = this.campaign.dryRun !== true;
             //loop until we're actually able to send without any response error
             while (1) {
                 try {
                     if (actuallySendMessage) {
+                        let params = {
+                            event: {
+                                type: 'message_create',
+                                message_create: {
+                                    target: { recipient_id: recipient.id_str },
+                                    message_data: { text: this.campaign.message }
+                                }
+                            }
+                        };
                         let response = await this.twitter.post('direct_messages/events/new', params);
                     }
-                    //no error means the send succeeded, add to the history and save it
+                    //no response error means the send succeeded, add to the history and save it
+                    var curDate = new Date();
+                    //update the message history log with this event
+                    //the events are used to track how many of our 1000-messages-per-24-hours we've used up
+                    this.messageHistory.events.push({ campaign_id: this.campaign.campaign_id, recipient: recipient.id_str, time: curDate });
+                    //update the recipient map for this campaign so we remember that this recipient has
+                    //already received this campaign. we store the current date into the map, which
+                    //implicitly means that the follower was sent this campaign at that date/time
+                    //create the recipient map for this campaign if it doesnt exist yet
+                    var recipientMap = this.messageHistory.campaigns.get(this.campaign.campaign_id);
+                    if (!recipientMap) {
+                        recipientMap = new Map();
+                        this.messageHistory.campaigns.set(this.campaign.campaign_id, recipientMap);
+                    }
                     //update the entry for this recipient. they received this campaign on 'curDate'
                     recipientMap.set(recipient.id_str, curDate);
                     //save the history back to wherever its being stored    
@@ -371,16 +371,17 @@ class MessageHistory {
     //determine how many milliseconds we must wait until
     //sending the next message
     CalcMillisToWaitUntilNextSend() {
-        //if we havent yet sent *more* than 1000 messages in total, we can send immediately
-        if (this.events.length <= 1000)
+        //if we haven't yet sent 1000 messages, we know we can sent the next one without delay
+        if (this.events.length < 1000)
             return 0;
         //look back 1000 messages into the past. when did we send that one?
         //was it more than 24 hours ago? if so, we can send immediately
-        let event = this.events[1000];
+        let indexOf1000thMessage = this.events.length - 1000;
+        let event = this.events[indexOf1000thMessage];
         let millisIn24Hours = 1000 * 60 * 60 * 24;
         var curTime = new Date();
         var twentyTwentyTwentyFourHoursAgooo = new Date(curTime.getTime() - millisIn24Hours);
-        //if the 1000th message in the past is older than a day, we can send now.
+        //if the 1000th message in the past is more than 24 hours old, we can send without delay
         if (event.time.getTime() < twentyTwentyTwentyFourHoursAgooo.getTime())
             return 0;
         //ok so the 1000th message is within the past 24 hours. the time at which
