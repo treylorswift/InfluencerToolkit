@@ -4,15 +4,15 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 
 ### Features
 
-- Node.js command-line tool runs messaging compaigns defined in simple .json files (see "Command-line Information" further below)
+- Node.js command-line tool runs messaging campaigns defined in simple .json files (see "Command-line information" further below)
 
-- Sent messages are tracked to ensure each follower is not contacted more than once for any particular messaging campaign.
+- Followers are downloaded and cached on the first run. @balajis your follower download will take around 30-40 minutes. If the follower download is interrupted it will resume where it left off on the next run. Refresh your follower cache at any time by running with the `-rebuildFollowers` command-line option.
 
-- Followers are automatically sorted by influence and can be further filtered by tags (ie matching words in their twitter bio).
+- Followers are automatically sorted by influence and can be further filtered by tags (ie matching words in their twitter bio). You can also sort them by most-recently-followed.
 
-- Message sending API rate limits are respected by tracking api usage and throttling appropriately. Unexpected server imposed API rate limits are respected as well.
-
-- Your follower list can be refreshed periodically using -rebuildFollowers.
+- Message sends are tracked to ensure each follower is contacted only once, and scheduled to avoid hitting API rate limit errors. If rate limit errors are hit, it will wait 1 minute and retry. Tracking is stored on disk so it will do the right thing across invocations.
+ 
+- Dry runs allow you to see who would be contacted by a messaging campaign without actually spamming people.
 
 ### 
 
@@ -22,7 +22,7 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 1.  `git clone https://github.com/treylorswift/InfluencerToolkit.git`
 2.  navigate to src/
 3.  `npm install`
-4.  Go to <https://apps.twitter.com> and create an app for testing this module. Make sure it has read/write permissions.
+4.  Go to <https://apps.twitter.com> and create an app for testing. Make sure it has read/write permissions.
 5.  Grab the consumer key/secret, and the access token/secret and put them in src/build/app_auth.json and src/build/user_auth.json, respectively.
 6. navigate to src/build
 7. Run the test campaign (described below)
