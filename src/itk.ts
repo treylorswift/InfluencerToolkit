@@ -60,16 +60,23 @@ The messaging campaign json is as follows:
 
     filter:
     {
-        tags:Array<string> - only messages followers whose Twitter bio contains words
-                             matching any of the tags specified
+        tags:Array<string> - will only send to a follower if their Twitter bio
+                             contains at least 1 word that matches at least 1
+                             of the specified tags. Matching is not case-sensitive.
     }
 
-    sort:string - "influence" orders recipients by their follower count, "recent"
-                  orders them by how recently they followed you. If not specified,
-                  default is "influence".
+    sort:string - "influence" orders recipients by their follower count,
+                  "recent" orders them by how recently they followed you.
+                  If not specified, default is "influence".
 
     dryRun:boolean - set to true to prevent messages from being sent or logged, useful
                      during testing
+
+    scheduling:string - "burst" will send without delay as many msgs as possible
+                        (sending all 1000 msgs allowed per day at once)
+                        "spread" will spread sends out over a 24 hour period
+                        (one message every 1 minute and 26 seconds, approximately)
+                        default is "burst"
 }
             
 Examples:

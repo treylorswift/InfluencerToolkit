@@ -40,13 +40,22 @@ class MessagingCampaign {
             return null;
         }
         campaign.dryRun = (json.dryRun === true);
-        //make sure sort, if specified, is a string and is either 'influence' or 'recent'
+        //make sure 'sort', if specified, is a string and is either 'influence' or 'recent'
         campaign.sort = json.sort;
         if (!campaign.sort)
             campaign.sort = "influence";
         else if (typeof (campaign.sort) !== 'string' ||
             (campaign.sort !== 'influence' && campaign.sort !== 'recent')) {
             console.log("MessagingCampaign - Invalid sort specified: " + JSON.stringify(campaign.sort));
+            return null;
+        }
+        //make sure 'scheduling', if specified, is a string and is either 'burst' or 'spread'
+        campaign.scheduling = json.scheduling;
+        if (!campaign.scheduling)
+            campaign.scheduling = "burst";
+        else if (typeof (campaign.scheduling) !== 'string' ||
+            (campaign.scheduling !== 'burst' && campaign.scheduling !== 'spread')) {
+            console.log("MessagingCampaign - Invalid scheduling specified: " + JSON.stringify(campaign.scheduling));
             return null;
         }
         //make sure filter, if specified, is an object
@@ -155,12 +164,18 @@ class MessagingCampaignManager {
             }
             //figure out when it is safe to start sending the next message
             //max of 1000 can be sent in 24 hour window
-            var timeToWait = this.messageHistory.CalcMillisToWaitUntilNextSend();
-            if (timeToWait > 0) {
+            //campaign scheduling may dictate a more evenly spread distribution of sends
+            var delay = this.messageHistory.CalcMillisToWaitUntilNextSend(this.campaign);
+            if (delay.timeToWait > 0) {
                 var curDate = new Date();
-                var sendDate = new Date(curDate.getTime() + timeToWait);
-                console.log(`Hit Twitter Direct Message API Rate Limit at ${curDate.toString()}`);
-                console.log(`                     sending next message at ${sendDate.toString()}`);
+                var sendDate = new Date(curDate.getTime() + delay.timeToWait);
+                if (delay.reason === SendDelayReason.RateLimit) {
+                    console.log(`Hit Twitter Direct Message API Rate Limit at ${curDate.toString()}`);
+                    console.log(`                     sending next message at ${sendDate.toString()}`);
+                }
+                else {
+                    console.log(`Spread scheduling will send next message at ${sendDate.toString()}`);
+                }
             }
             setTimeout(async () => {
                 var sendOK = await this.SendMessage(this.recipients[recipientIndex]);
@@ -173,7 +188,7 @@ class MessagingCampaignManager {
                 //on to the next recipient, keep on going
                 this.nextRecipientIndex++;
                 setTimeout(this.ProcessMessages, 0);
-            }, timeToWait);
+            }, delay.timeToWait);
         };
         this.user = user;
         this.twitter = user.GetTwitterClient();
@@ -361,39 +376,83 @@ class MessagingCampaignManager {
     }
 }
 exports.MessagingCampaignManager = MessagingCampaignManager;
+var SendDelayReason;
+(function (SendDelayReason) {
+    SendDelayReason[SendDelayReason["NoDelay"] = 0] = "NoDelay";
+    SendDelayReason[SendDelayReason["Spread"] = 1] = "Spread";
+    SendDelayReason[SendDelayReason["RateLimit"] = 2] = "RateLimit";
+})(SendDelayReason || (SendDelayReason = {}));
 class MessageHistory {
     constructor() {
         this.events = new Array();
         this.campaigns = new Map();
     }
-    //based on history and twitter rate limit of
-    //1000 messages per user per day,
-    //determine how many milliseconds we must wait until
-    //sending the next message
-    CalcMillisToWaitUntilNextSend() {
-        //if we haven't yet sent 1000 messages, we know we can sent the next one without delay
+    //the time until next send is determined by
+    //- history of messages sent thus far
+    //- scheduling preference (burst or spread)
+    //- twitter rate limit of 1000 messages per 24 hour period
+    CalcMillisToWaitUntilNextSend(campaign) {
+        var curTime = new Date();
+        let millisIn24Hours = 1000 * 60 * 60 * 24;
+        //in initial cases there is no need to wait and we can send with no delay
+        let minimumWait = 0;
+        let minimumDelayReason = SendDelayReason.NoDelay;
+        //spread scheduling can impose a delay after the very first sent message.
+        //it will increase the minimumWait and set the minimumDelayReason appropriately (if necessary)
+        if (campaign.scheduling === "spread") {
+            //we want to evenly distribute 1000 messages over a 24 hour period
+            let minimumSendInterval = millisIn24Hours / 1000;
+            //spread scheduling dictates that the next send should occur minimumSendInterval after the most recently sent message.
+            if (this.events.length > 0) {
+                let mostRecentSend = this.events[this.events.length - 1].time;
+                let timeToSend = new Date(mostRecentSend.getTime() + minimumSendInterval);
+                //how much time remains between now and the time at which spread scheduling dictates we should send?
+                minimumWait = timeToSend.getTime() - curTime.getTime();
+                if (minimumWait > 0) {
+                    //impose minimum delay due to spread scheduling
+                    minimumDelayReason = SendDelayReason.Spread;
+                }
+                else {
+                    //we're already past the minimum send interval, spread scheduling imposes no additional minimum wait
+                    minimumWait = 0;
+                }
+            }
+        }
+        //if we haven't yet sent 1000 messages, twitter api rate limits dont apply so we can 
+        //we know we can sent the next message without further delay
         if (this.events.length < 1000)
-            return 0;
+            return { timeToWait: minimumWait, reason: minimumDelayReason };
+        //we HAVE sent 1000 messages... 
         //look back 1000 messages into the past. when did we send that one?
-        //was it more than 24 hours ago? if so, we can send immediately
+        //was it more than 24 hours ago? if so, rate limits dont apply and we can send without
+        //further delay
         let indexOf1000thMessage = this.events.length - 1000;
         let event = this.events[indexOf1000thMessage];
-        let millisIn24Hours = 1000 * 60 * 60 * 24;
-        var curTime = new Date();
         var twentyTwentyTwentyFourHoursAgooo = new Date(curTime.getTime() - millisIn24Hours);
-        //if the 1000th message in the past is more than 24 hours old, we can send without delay
+        //if the 1000th message in the past is more than 24 hours old, we can send without further delay
         if (event.time.getTime() < twentyTwentyTwentyFourHoursAgooo.getTime())
-            return 0;
+            return { timeToWait: minimumWait, reason: minimumDelayReason };
         //ok so the 1000th message is within the past 24 hours. the time at which
         //we will be able to send is 24 hours after that message.
         let timeToSend = new Date(event.time.getTime() + millisIn24Hours);
-        //the amount of time to wait is just subtraction
+        //how much time remains between now and the time at which api rate limits dictate we can send?
         let timeToWait = timeToSend.getTime() - curTime.getTime();
         if (timeToWait < 0) {
-            console.log("check your math bro");
+            console.log(`Unexpected error calculating timeToWait, curTime: ${curTime} - timeToSend: ${timeToSend}`);
             timeToWait = 0;
         }
-        return timeToWait;
+        //reconcile timeToWait against the minimumWait calculated above (possibly by spread scheduling)
+        //its possible api rate limits may not dictate the delay at this point but if api rate limit
+        //requires us to wait longer than the minimumWait calculated above, we must wait for the longer
+        //timeToWait, and note that the reason is due to api rate limits
+        if (timeToWait > minimumWait) {
+            return { timeToWait: timeToWait, reason: SendDelayReason.RateLimit };
+        }
+        else {
+            //api rate limits do not require any delay beyond the minimum already calculated so we just
+            //return the minimum delay as it was already calculated
+            return { timeToWait: minimumWait, reason: minimumDelayReason };
+        }
     }
     HasRecipientRecievedCampaign(id_str, campaign_id) {
         //the campaign map stores, for each recipient, what time they were sent the message
