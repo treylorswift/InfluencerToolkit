@@ -542,19 +542,20 @@ export class MessageHistory
     //sending the next message
     CalcMillisToWaitUntilNextSend():number
     {
-        //if we havent yet sent *more* than 1000 messages in total, we can send immediately
-        if (this.events.length<=1000)
+        //if we haven't yet sent 1000 messages, we know we can sent the next one without delay
+        if (this.events.length<1000)
             return 0;
         
         //look back 1000 messages into the past. when did we send that one?
         //was it more than 24 hours ago? if so, we can send immediately
-        let event = this.events[1000];
+        let indexOf1000thMessage = this.events.length - 1000;
+        let event = this.events[indexOf1000thMessage];
 
         let millisIn24Hours = 1000*60*60*24;
         var curTime = new Date();
         var twentyTwentyTwentyFourHoursAgooo = new Date(curTime.getTime() - millisIn24Hours);
 
-        //if the 1000th message in the past is older than a day, we can send now.
+        //if the 1000th message in the past is more than 24 hours old, we can send without delay
         if (event.time.getTime() < twentyTwentyTwentyFourHoursAgooo.getTime())
             return 0;
 
