@@ -6,7 +6,7 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
 
 - Node.js command-line tool runs messaging campaigns defined in simple .json files (see "Command-line information" further below)
 
-- Followers are downloaded and cached on the first run. @balajis your follower download will take around 30-40 minutes. If the follower download is interrupted it will resume where it left off on the next run. Refresh your follower cache at any time by running with the `-rebuildFollowers` command-line option.
+- Followers are downloaded and cached on the first run. Api rate limits impose a maximum download rate of roughly 300K followers per hour. If the follower download is interrupted it will resume where it left off on the next run. Refresh your follower cache at any time by running with the `-rebuildFollowers` command-line option.
 
 - Followers are automatically sorted by influence and can be further filtered by tags (ie matching words in their twitter bio). You can also sort them by most-recently-followed.
 
@@ -14,6 +14,7 @@ Influencer Toolkit automates sending of direct messages to your Twitter follower
  
 - Dry runs allow you to see who would be contacted by a messaging campaign without actually spamming people.
 
+- Sending can be scheduled in "burst" or "spread" mode. Send your 1000 messages per day all at once or spread them out over a 24 hour period (roughly 1 message every 1 minute 26 seconds).
 ### 
 
 
@@ -144,16 +145,23 @@ The messaging campaign json is as follows:
 
     filter:
     {
-        tags:Array<string> - only contacts followers whose Twitter bio contains words
-                             that match any of the tags specified
+        tags:Array<string> - will only send to a follower if their Twitter bio
+                             contains at least 1 word that matches at least 1
+                             of the specified tags. Matching is not case-sensitive.
     }
 
-    sort:string - "influence" orders recipients by their follower count, "recent"
-                  orders them by how recently they followed you. If not specified,
-                  default is "influence".
-                  
+    sort:string - "influence" orders recipients by their follower count,
+                  "recent" orders them by how recently they followed you.
+                  If not specified, default is "influence".
+
     dryRun:boolean - set to true to prevent messages from being sent or logged, useful
                      during testing
+
+    scheduling:string - "burst" will send without delay as many msgs as possible
+                        (sending all 1000 msgs allowed per day at once)
+                        "spread" will spread sends out over a 24 hour period
+                        (one message every 1 minute and 26 seconds, approximately)
+                        default is "burst"
 }
             
 Examples:
