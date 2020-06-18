@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const crypto = require("crypto");
 const fs = require("fs");
+const TwitterUser_1 = require("./TwitterUser");
 const Delay_1 = require("./Delay");
 class MessagingCampaign {
     static fromJSON(json) {
@@ -133,6 +134,14 @@ class MessagingCampaignManager {
                     return true;
                 }
                 catch (err) {
+                    //detect read-only application error - we shouldn't get this error because we should have checked
+                    //permissions by now and forced ourselves into a dry run mode.. but just in case, catch the error so
+                    //we dont needlessly retry over and over
+                    if (typeof (err.error) === 'string' && err.error.startsWith('Read-only')) {
+                        console.log(`Send to ${recipient.screen_name} denied, app access is read-only`);
+                        return false;
+                    }
+                    else 
                     //handle going over the rate limit..
                     if (err && Array.isArray(err.errors) && err.errors[0] && err.errors[0].code === 88) {
                         console.log('Unexpectedly hit api rate limit, waiting 1 minute before attempting again');
@@ -197,7 +206,8 @@ class MessagingCampaignManager {
         this.nextRecipientIndex = 0;
         this.totalSent = 0;
         this.totalToSend = 0;
-        this.LoadMessageHistory();
+        //dont load the history until we actually need to run the campaign
+        this.messageHistory = null;
     }
     //we keep a separate history for dry runs so that they simulate
     //exactly the same way a live run would..
@@ -278,8 +288,16 @@ class MessagingCampaignManager {
     }
     async Run() {
         console.log("Beginning campaign: " + this.campaign.campaign_id);
-        if (this.campaign.dryRun === true)
-            console.log("*** DryRun===true, progress will be displayed but messages will not actually be sent ***");
+        //if the campaign is a live campaign and we are lacking the necessary permissions, issue a warning and
+        //force execution to be dryRun
+        if (this.campaign.dryRun !== true && this.user.GetPermissionLevel() !== TwitterUser_1.AppPermissionLevel.ReadWriteDirectMessages) {
+            this.campaign.dryRun = true;
+            console.log(`*** App permissions do not allow direct messages, campaign will be forced to execute as a dry run ***`);
+            console.log(`*** Progress will be displayed but messages will not actually be sent ***`);
+            console.log(`*** Visit https://apps.twitter.com and update permissions in order to send direct messages ***`);
+        }
+        else if (this.campaign.dryRun === true)
+            console.log("*** campaign.dryRun=true, progress will be displayed but messages will not actually be sent ***");
         console.log("Campaign message: " + this.campaign.message);
         //get the users followers
         console.log(`Obtaining followers for ${this.user.GetScreenName()}..`);
@@ -289,10 +307,11 @@ class MessagingCampaignManager {
             console.log(`${this.user.GetScreenName()} doesn't have any followers, there are no followers to contact`);
             return;
         }
-        //remove from this list any recipients who we have already contacted in this campaign
-        //
+        //need to remove from the followers list any recipients who we have already been contacted in this campaign
+        //load the message history now so we can determine who has already been contacted
+        this.LoadMessageHistory();
         //there is room to optimize here by filtering out these users as they are retreived
-        //from storage but for now this is fine. 
+        //from storage but for now this is ok
         let numAlreadyContacted = 0;
         for (var i = 0; i < this.recipients.length;) {
             if (this.messageHistory.HasRecipientRecievedCampaign(this.recipients[i].id_str, this.campaign.campaign_id)) {

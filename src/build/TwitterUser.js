@@ -5,7 +5,7 @@ const fs = require("fs");
 //so there are some @ts-ignore lines in here to suppress the incorrect warnings
 const Twitter = require("twitter-lite");
 const Delay_1 = require("./Delay");
-class TwitterFollowerCache {
+class TwitterFollowerDiskCache {
     constructor(screen_name) {
         this.screen_name = screen_name;
         this.fileName = `./${this.screen_name}.followers.json`;
@@ -267,8 +267,15 @@ class TwitterFollowerCache {
         }
     }
 }
+var AppPermissionLevel;
+(function (AppPermissionLevel) {
+    AppPermissionLevel[AppPermissionLevel["Read"] = 0] = "Read";
+    AppPermissionLevel[AppPermissionLevel["ReadWrite"] = 1] = "ReadWrite";
+    AppPermissionLevel[AppPermissionLevel["ReadWriteDirectMessages"] = 2] = "ReadWriteDirectMessages";
+})(AppPermissionLevel = exports.AppPermissionLevel || (exports.AppPermissionLevel = {}));
 class TwitterUser {
     constructor() {
+        this.permissionLevel = AppPermissionLevel.Read;
         //their twitter handle ('screen_name' in twitter api) gets filled in after a successful
         //call to Init().
         this.screen_name = null;
@@ -287,6 +294,23 @@ class TwitterUser {
             });
             //verify that the app_auth and user_auth info is useable
             var results = await this.client.get("account/verify_credentials");
+            //examine headers to determine app permissions
+            let x_access_level = results._headers.get('x-access-level');
+            switch (x_access_level) {
+                case 'read':
+                    this.permissionLevel = AppPermissionLevel.Read;
+                    break;
+                case 'read-write':
+                    this.permissionLevel = AppPermissionLevel.ReadWrite;
+                    break;
+                case 'read-write-directmessages':
+                    this.permissionLevel = AppPermissionLevel.ReadWriteDirectMessages;
+                    break;
+                default:
+                    console.log(`Unrecognized x-access-level: ${x_access_level}, can't continue`);
+                    return false;
+                    break;
+            }
             //store some info that will be helpful as we proceed..
             this.screen_name = results.screen_name;
             return true;
@@ -296,6 +320,7 @@ class TwitterUser {
             return false;
         }
     }
+    GetPermissionLevel() { return this.permissionLevel; }
     GetScreenName() {
         if (!this.screen_name)
             console.log("TwitterUser.GetScreenName - this.screen_name not defined, Init() must succeed first");
@@ -311,7 +336,7 @@ class TwitterUser {
     }
     //returns followers for the specified Twitter user
     async GetFollowersForUser(screen_name, options) {
-        let cache = new TwitterFollowerCache(screen_name);
+        let cache = new TwitterFollowerDiskCache(screen_name);
         //if they specified that we must force our refresh of the cache, do so
         if (options && options.forceRebuild === true) {
             return cache.BuildFollowerCache(this.client);

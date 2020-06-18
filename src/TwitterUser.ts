@@ -22,7 +22,14 @@ export type TwitterFollower =
 
 type FollowerCacheProgress = {cursor:string, lastFollowerId:string, lastFollowerScreenName:string, totalRetreived:number}
 
-class TwitterFollowerCache
+interface TwitterFollowerCache
+{
+    LoadCache():Array<TwitterFollower>
+    //@ts-ignore
+    async BuildFollowerCache(twitter:Twitter):Promise<Array<TwitterFollower>>
+}
+
+class TwitterFollowerDiskCache implements TwitterFollowerCache
 {
     private screen_name:string;
     private fileName:string;
@@ -37,7 +44,7 @@ class TwitterFollowerCache
         this.anyWritten = false;
     }
 
-    GetPriorProgress():FollowerCacheProgress
+    private GetPriorProgress():FollowerCacheProgress
     {
         //was some previous cache process interrupted?
         try
@@ -386,11 +393,19 @@ class TwitterFollowerCache
 }
 
 
+export enum AppPermissionLevel
+{
+    Read,
+    ReadWrite,
+    ReadWriteDirectMessages
+}
+
 export class TwitterUser
 {
     // @ts-ignore
     private client:Twitter;
-    
+    private permissionLevel:AppPermissionLevel = AppPermissionLevel.Read;
+
     //their twitter handle ('screen_name' in twitter api) gets filled in after a successful
     //call to Init().
     private screen_name:string = null;
@@ -418,6 +433,19 @@ export class TwitterUser
             //verify that the app_auth and user_auth info is useable
             var results = await this.client.get("account/verify_credentials")
 
+            //examine headers to determine app permissions
+            let x_access_level = results._headers.get('x-access-level');
+            switch (x_access_level)
+            {
+                case 'read': this.permissionLevel = AppPermissionLevel.Read; break;
+                case 'read-write': this.permissionLevel = AppPermissionLevel.ReadWrite; break;
+                case 'read-write-directmessages': this.permissionLevel = AppPermissionLevel.ReadWriteDirectMessages; break;
+                default:
+                    console.log(`Unrecognized x-access-level: ${x_access_level}, can't continue`);
+                    return false;
+                    break;
+            }
+
             //store some info that will be helpful as we proceed..
             this.screen_name = results.screen_name;
             return true;
@@ -428,6 +456,8 @@ export class TwitterUser
           return false;
         }
     }
+
+    GetPermissionLevel():AppPermissionLevel { return this.permissionLevel; }
 
     GetScreenName():string
     {
@@ -452,7 +482,7 @@ export class TwitterUser
     //returns followers for the specified Twitter user
     async GetFollowersForUser(screen_name:string, options?:{forceRebuild?:boolean}):Promise<Array<TwitterFollower>>
     {
-        let cache = new TwitterFollowerCache(screen_name);
+        let cache = new TwitterFollowerDiskCache(screen_name);
 
         //if they specified that we must force our refresh of the cache, do so
         if (options && options.forceRebuild===true)
