@@ -1,3 +1,5 @@
+## This repository is deprecated, the updated repo is at https://github.com/treylorswift/InfluencerToolkitCLI
+
 # Influencer Toolkit
 
 Influencer Toolkit automates sending of direct messages to your Twitter followers.
