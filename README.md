@@ -1,4 +1,4 @@
-## This repository is deprecated, the updated repo is at https://github.com/treylorswift/InfluencerToolkitCLI
+## This repository is deprecated, the new repo is at https://github.com/treylorswift/InfluencerToolkitCLI
 
 # Influencer Toolkit
 
